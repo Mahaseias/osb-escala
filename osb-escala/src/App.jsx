@@ -102,6 +102,8 @@ export default function App() {
   const [otherOrch, setOtherOrch] = useState(saved?.otherOrch ?? {});
   const [requests,  setRequests]  = useState(saved?.requests  ?? []);
   const [nextEvtId, setNextEvtId] = useState(saved?.nextEvtId ?? 100);
+  const [musicians, setMusicians] = useState(saved?.musicians ?? MUSICIANS);
+  const [nextMusId, setNextMusId] = useState(saved?.nextMusId ?? 100);
 
   const [reqMus, setReqMus] = useState("");
   const [reqEvt, setReqEvt] = useState("");
@@ -114,13 +116,20 @@ export default function App() {
   const [formName,  setFormName]  = useState("");
   const [formMand,  setFormMand]  = useState(false);
 
+  // ── musician editor state ──
+  const [editingMusId,  setEditingMusId]  = useState(null);
+  const [formMusName,   setFormMusName]   = useState("");
+  const [formMusRole,   setFormMusRole]   = useState("");
+  const [formMusTotal,  setFormMusTotal]  = useState(6);
+  const [formMusTaken,  setFormMusTaken]  = useState(0);
+
   // ── timeline expand state ──
   const [expandedEvt, setExpandedEvt] = useState(null);
 
   // persist whenever core data changes
   useEffect(() => {
-    saveState({ events, schedule, otherOrch, requests, nextEvtId });
-  }, [events, schedule, otherOrch, requests, nextEvtId]);
+    saveState({ events, schedule, otherOrch, requests, nextEvtId, musicians, nextMusId });
+  }, [events, schedule, otherOrch, requests, nextEvtId, musicians, nextMusId]);
 
   /* helpers */
   const flash = (msg, type="ok") => {
@@ -138,7 +147,7 @@ export default function App() {
   const toggle = (mId, eId) => {
     const ev = events.find(e=>e.id===eId);
     if (ev?.mandatory) return;
-    const m  = MUSICIANS.find(x=>x.id===mId);
+    const m  = musicians.find(x=>x.id===mId);
     const on = schedule[mId]?.[eId]==="leave";
     if (!on && rem(m)<=0) { flash(`${m.name}: quota atingida.`, "warn"); return; }
     setSchedule(p=>({ ...p, [mId]:{ ...(p[mId]||{}), [eId]: on?null:"leave" } }));
@@ -158,7 +167,7 @@ export default function App() {
 
   const approve = rId => {
     const r = requests.find(x=>x.id===rId);
-    const m = MUSICIANS.find(x=>x.id===r.mId);
+    const m = musicians.find(x=>x.id===r.mId);
     if (otherOrch[r.mId]) { flash(`${m.name}: confirme a outra orq. antes.`, "warn"); return; }
     if (rem(m)<=0) { flash(`${m.name} sem folgas restantes.`, "warn"); return; }
     setSchedule(p=>({ ...p, [r.mId]:{ ...(p[r.mId]||{}), [r.eIdx]:"leave" } }));
@@ -221,8 +230,51 @@ export default function App() {
     });
   };
 
+  /* ── musician editor ── */
+  const openNewMusician = () => {
+    setEditingMusId("new"); setFormMusName(""); setFormMusRole(""); setFormMusTotal(6); setFormMusTaken(0);
+  };
+
+  const openEditMusician = m => {
+    setEditingMusId(m.id); setFormMusName(m.name); setFormMusRole(m.role);
+    setFormMusTotal(m.total); setFormMusTaken(m.taken);
+  };
+
+  const cancelEditMusician = () => setEditingMusId(null);
+
+  const saveMusician = () => {
+    if (!formMusName.trim() || !formMusRole.trim()) { flash("Preencha nome e cargo.", "warn"); return; }
+    const abbr = formMusName.trim().slice(0,2);
+    if (editingMusId === "new") {
+      setMusicians(p => [...p, {
+        id: nextMusId, name: formMusName.trim(), abbr,
+        role: formMusRole.trim(), total: +formMusTotal, taken: +formMusTaken,
+      }]);
+      setNextMusId(n => n + 1);
+      flash("Músico adicionado.");
+    } else {
+      setMusicians(p => p.map(m => m.id === editingMusId
+        ? { ...m, name: formMusName.trim(), abbr: formMusName.trim().slice(0,2),
+            role: formMusRole.trim(), total: +formMusTotal, taken: +formMusTaken }
+        : m));
+      flash("Músico atualizado.");
+    }
+    setEditingMusId(null);
+  };
+
+  const deleteMusician = mId => {
+    const m = musicians.find(x => x.id === mId);
+    if (!window.confirm(`Excluir ${m.name}? Folgas marcadas e pedidos pendentes serão removidos.`)) return;
+    setMusicians(p => p.filter(x => x.id !== mId));
+    setSchedule(p => { const next = { ...p }; delete next[mId]; return next; });
+    setOtherOrch(p => { const next = { ...p }; delete next[mId]; return next; });
+    setRequests(p => p.filter(r => r.mId !== mId));
+    if (editingMusId === mId) setEditingMusId(null);
+    flash("Músico excluído.");
+  };
+
   /* derived */
-  const totalRem = MUSICIANS.reduce((a,m)=>a+Math.max(rem(m),0),0);
+  const totalRem = musicians.reduce((a,m)=>a+Math.max(rem(m),0),0);
 
   const SEL = { background:SURF, border:`1px solid ${LINE}`, borderRadius:12, color:TEXT,
                 padding:"13px 14px", fontSize:14, outline:"none", width:"100%" };
@@ -269,7 +321,7 @@ export default function App() {
           <div style={{ flex:1, overflowY:"auto", padding:"18px 20px" }}>
             {events.map((ev, i) => {
               const absCount = ev.mandatory ? 0
-                : MUSICIANS.filter(m=>schedule[m.id]?.[ev.id]==="leave").length;
+                : musicians.filter(m=>schedule[m.id]?.[ev.id]==="leave").length;
               const isOpen = expandedEvt === ev.id;
               const labelColor = ev.mandatory ? GOLD : "#8BAAC8";
               const dotColor = ev.mandatory ? GOLD
@@ -328,7 +380,7 @@ export default function App() {
                     {isOpen && (
                       <div style={{ background:SURF, borderRadius:"0 0 12px 12px",
                                     padding:"4px 12px 12px" }}>
-                        {MUSICIANS.map(m => {
+                        {musicians.map(m => {
                           const on  = schedule[m.id]?.[ev.id]==="leave";
                           const can = rem(m)>0 || on;
                           return (
@@ -380,73 +432,145 @@ export default function App() {
 
         {/* ══ MÚSICOS ══ */}
         {tab==="musicos" && (
-          <div style={{ flex:1, overflowY:"auto" }}>
-            {MUSICIANS.map(m => {
-              const r    = Math.max(rem(m),0);
-              const dn   = done(m);
-              const p    = pct(m);
-              const used = m.taken + MAN + gridLeaves(m.id);
-              const hasO = otherOrch[m.id];
-              return (
-                <div key={m.id} style={{ padding:"20px 20px 16px",
-                                          borderBottom:`1px solid ${LINE}` }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-                    {/* left: info */}
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ display:"flex", alignItems:"baseline",
-                                    gap:8, marginBottom:10 }}>
-                        <span style={{ fontSize:19, fontWeight:700,
-                                       color:ROLE_C[m.role]||TEXT }}>
-                          {m.name}
-                        </span>
-                        <span style={{ fontSize:12, color:DIM }}>{m.role}</span>
-                        {hasO && <span style={{ fontSize:12 }}>🎻</span>}
+          <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+
+            <div style={{ flex:1, overflowY:"auto", padding:"20px 20px 0" }}>
+              <div style={{ fontSize:10, letterSpacing:2, color:MUTED, marginBottom:12 }}>
+                {musicians.length} MÚSICO{musicians.length!==1?"S":""}
+              </div>
+
+              {musicians.map(m => {
+                const r    = Math.max(rem(m),0);
+                const dn   = done(m);
+                const p    = pct(m);
+                const used = m.taken + MAN + gridLeaves(m.id);
+                const hasO = otherOrch[m.id];
+                return (
+                  <div key={m.id} style={{ padding:"20px 0 16px",
+                                            borderBottom:`1px solid ${LINE}` }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+                      {/* left: info */}
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ display:"flex", alignItems:"baseline",
+                                      gap:8, marginBottom:10 }}>
+                          <span style={{ fontSize:19, fontWeight:700,
+                                         color:ROLE_C[m.role]||TEXT }}>
+                            {m.name}
+                          </span>
+                          <span style={{ fontSize:12, color:DIM }}>{m.role}</span>
+                          {hasO && <span style={{ fontSize:12 }}>🎻</span>}
+                        </div>
+                        <ThinBar pct={p} done={dn}/>
+                        <div style={{ fontSize:11, color:MUTED, marginTop:6 }}>
+                          {used}/{m.total} folgas
+                          <span style={{ color:LINE, marginLeft:6 }}>
+                            · {m.taken} ant. · {MAN} obrig. · {gridLeaves(m.id)} agend.
+                          </span>
+                        </div>
                       </div>
-                      <ThinBar pct={p} done={dn}/>
-                      <div style={{ fontSize:11, color:MUTED, marginTop:6 }}>
-                        {used}/{m.total} folgas
-                        <span style={{ color:LINE, marginLeft:6 }}>
-                          · {m.taken} ant. · {MAN} obrig. · {gridLeaves(m.id)} agend.
+                      {/* right: ring */}
+                      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3, flexShrink:0 }}>
+                        <Ring pct={p} rem={r} done={dn}/>
+                        <span style={{ fontSize:9, color:DIM, letterSpacing:0.2 }}>
+                          {dn ? "completo" : "restantes"}
                         </span>
                       </div>
                     </div>
-                    {/* right: ring */}
-                    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3, flexShrink:0 }}>
-                      <Ring pct={p} rem={r} done={dn}/>
-                      <span style={{ fontSize:9, color:DIM, letterSpacing:0.2 }}>
-                        {dn ? "completo" : "restantes"}
-                      </span>
+
+                    {/* action row */}
+                    <div style={{ display:"flex", gap:6, marginTop:14 }}>
+                      <button onClick={()=>setOtherOrch(p=>({...p,[m.id]:!p[m.id]}))}
+                        style={{ flex:1, padding:"10px",
+                                 borderRadius:10, border:`1px solid ${hasO?GOLD:LINE}`,
+                                 background:hasO?"#1E1500":SURF,
+                                 color:hasO?GOLD:DIM, cursor:"pointer", fontSize:12 }}>
+                        🎻 {hasO?"Outra orquestra — manual":"Marcar outra orquestra"}
+                      </button>
+                      <button onClick={()=>openEditMusician(m)}
+                        title="Editar músico"
+                        style={{ width:36, height:36, borderRadius:10,
+                                 border:`1px solid ${LINE}`, background:SURF,
+                                 color:DIM, cursor:"pointer", fontSize:14, flexShrink:0 }}>
+                        ✎
+                      </button>
+                      <button onClick={()=>deleteMusician(m.id)}
+                        title="Excluir músico"
+                        style={{ width:36, height:36, borderRadius:10,
+                                 border:`1px solid ${LINE}`, background:SURF,
+                                 color:RED, cursor:"pointer", fontSize:13, flexShrink:0 }}>
+                        ✕
+                      </button>
                     </div>
                   </div>
+                );
+              })}
 
-                  {/* other orchestra */}
-                  <button onClick={()=>setOtherOrch(p=>({...p,[m.id]:!p[m.id]}))}
-                    style={{ marginTop:14, width:"100%", padding:"10px",
-                             borderRadius:10, border:`1px solid ${hasO?GOLD:LINE}`,
-                             background:hasO?"#1E1500":SURF,
-                             color:hasO?GOLD:DIM, cursor:"pointer", fontSize:12 }}>
-                    🎻 {hasO?"Outra orquestra — aprovação manual obrigatória":"Marcar outra orquestra"}
-                  </button>
-                </div>
-              );
-            })}
+              <div style={{ height:140 }}/>
+            </div>
 
-            {/* info */}
-            <div style={{ padding:"20px" }}>
-              <div style={{ fontSize:10, letterSpacing:2, color:MUTED, marginBottom:12 }}>
-                JÁ CONFIRMADOS
-              </div>
-              {[
-                ["22–23 Jun","Mateus em folga"],
-                ["11–12 Jul","Todos presentes · Nikolay em atividades"],
-                ["28 Jul–1 Ago","Sérgio em folga"],
-              ].map(([d,n])=>(
-                <div key={d} style={{ display:"flex", gap:14, padding:"8px 0",
-                                       borderBottom:`1px solid ${LINE}` }}>
-                  <span style={{ fontSize:12, color:DIM, minWidth:76 }}>{d}</span>
-                  <span style={{ fontSize:12, color:MUTED }}>{n}</span>
+            {/* fixed bottom: add button or edit form */}
+            <div style={{ borderTop:`1px solid ${LINE}`, padding:"16px 20px",
+                          flexShrink:0, background:BG }}>
+              {editingMusId === null ? (
+                <button onClick={openNewMusician}
+                  style={{ width:"100%", padding:"15px", borderRadius:12, border:"none",
+                           background:GOLD, color:"#09090B", fontSize:15,
+                           fontWeight:700, cursor:"pointer" }}>
+                  + Adicionar músico
+                </button>
+              ) : (
+                <div>
+                  <div style={{ fontSize:10, letterSpacing:2, color:MUTED, marginBottom:10 }}>
+                    {editingMusId==="new" ? "NOVO MÚSICO" : "EDITAR MÚSICO"}
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    <input value={formMusName} onChange={e=>setFormMusName(e.target.value)}
+                      placeholder="Nome"
+                      style={{ background:SURF, border:`1px solid ${LINE}`, borderRadius:12,
+                               color:TEXT, padding:"13px 14px", fontSize:14, outline:"none" }}/>
+                    <input value={formMusRole} onChange={e=>setFormMusRole(e.target.value)}
+                      placeholder="Cargo (ex: Tutti, Concertino, Chefe)"
+                      style={{ background:SURF, border:`1px solid ${LINE}`, borderRadius:12,
+                               color:TEXT, padding:"13px 14px", fontSize:14, outline:"none" }}/>
+                    <div style={{ display:"flex", gap:8 }}>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:10, color:MUTED, marginBottom:4, paddingLeft:2 }}>
+                          Quota total de folgas
+                        </div>
+                        <input type="number" min="0" value={formMusTotal}
+                          onChange={e=>setFormMusTotal(e.target.value)}
+                          style={{ background:SURF, border:`1px solid ${LINE}`, borderRadius:12,
+                                   color:TEXT, padding:"13px 14px", fontSize:14, outline:"none",
+                                   width:"100%", boxSizing:"border-box" }}/>
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:10, color:MUTED, marginBottom:4, paddingLeft:2 }}>
+                          Folgas já tiradas
+                        </div>
+                        <input type="number" min="0" value={formMusTaken}
+                          onChange={e=>setFormMusTaken(e.target.value)}
+                          style={{ background:SURF, border:`1px solid ${LINE}`, borderRadius:12,
+                                   color:TEXT, padding:"13px 14px", fontSize:14, outline:"none",
+                                   width:"100%", boxSizing:"border-box" }}/>
+                      </div>
+                    </div>
+                    <div style={{ display:"flex", gap:8, marginTop:4 }}>
+                      <button onClick={saveMusician}
+                        style={{ flex:1, padding:"14px", borderRadius:12, border:"none",
+                                 background:GOLD, color:"#09090B", fontSize:14,
+                                 fontWeight:700, cursor:"pointer" }}>
+                        Salvar
+                      </button>
+                      <button onClick={cancelEditMusician}
+                        style={{ flex:1, padding:"14px", borderRadius:12,
+                                 border:`1px solid ${LINE}`, background:"transparent",
+                                 color:DIM, fontSize:14, cursor:"pointer" }}>
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}
@@ -463,7 +587,7 @@ export default function App() {
                   <span style={{ fontSize:14 }}>Nenhum pedido pendente</span>
                 </div>
               ) : requests.map((r,idx)=>{
-                const m  = MUSICIANS.find(x=>x.id===r.mId);
+                const m  = musicians.find(x=>x.id===r.mId);
                 const ev = events.find(e=>e.id===r.eIdx);
                 const hasO = otherOrch[r.mId];
                 const noR  = rem(m)<=0;
@@ -514,7 +638,7 @@ export default function App() {
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 <select value={reqMus} onChange={e=>setReqMus(e.target.value)} style={SEL}>
                   <option value="">Selecionar músico…</option>
-                  {MUSICIANS.map(m=>(
+                  {musicians.map(m=>(
                     <option key={m.id} value={m.id}>
                       {m.name} — {Math.max(rem(m),0)} rest.
                     </option>
