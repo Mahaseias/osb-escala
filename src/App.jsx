@@ -239,10 +239,11 @@ export default function App() {
   const moveEvent = (eId, dir) => {
     setEvents(p => {
       const idx = p.findIndex(e => e.id === eId);
+      if (idx < 0) return p;
       const newIdx = idx + dir;
       if (newIdx < 0 || newIdx >= p.length) return p;
       const next = [...p];
-      [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+      const tmp = next[idx]; next[idx] = next[newIdx]; next[newIdx] = tmp;
       return next;
     });
   };
@@ -319,7 +320,7 @@ export default function App() {
       <div style={{ padding:"16px 20px 14px", display:"flex",
                     alignItems:"flex-start", justifyContent:"space-between", flexShrink:0 }}>
         <div>
-          <div style={{ fontSize:9, letterSpacing:3, color:GOLD, marginBottom:5 }}>OSB · NAIPE DE CORDAS</div>
+          <div style={{ fontSize:9, letterSpacing:3, color:GOLD, marginBottom:5 }}>OSB • 2º Violino</div>
           <div style={{ fontSize:22, fontWeight:700, letterSpacing:-0.5 }}>Mateus Vieira Rocha</div>
         </div>
         <div style={{ textAlign:"right", paddingTop:4 }}>
@@ -723,12 +724,16 @@ export default function App() {
                   <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                     {/* reorder arrows */}
                     <div style={{ display:"flex", flexDirection:"column", gap:2, flexShrink:0 }}>
-                      <button onClick={()=>moveEvent(ev.id,-1)} disabled={i===0}
-                        style={{ width:20, height:16, border:"none", background:"transparent",
-                                 color: i===0?LINE:DIM, cursor:i===0?"default":"pointer", fontSize:10 }}>▲</button>
-                      <button onClick={()=>moveEvent(ev.id,1)} disabled={i===events.length-1}
-                        style={{ width:20, height:16, border:"none", background:"transparent",
-                                 color: i===events.length-1?LINE:DIM, cursor:i===events.length-1?"default":"pointer", fontSize:10 }}>▼</button>
+                      <button
+                        onClick={e=>{ e.stopPropagation(); moveEvent(ev.id,-1); }}
+                        disabled={i===0}
+                        style={{ width:28, height:22, border:"none", background:"transparent",
+                                 color: i===0?LINE:DIM, cursor:i===0?"default":"pointer", fontSize:11 }}>▲</button>
+                      <button
+                        onClick={e=>{ e.stopPropagation(); moveEvent(ev.id,1); }}
+                        disabled={i===events.length-1}
+                        style={{ width:28, height:22, border:"none", background:"transparent",
+                                 color: i===events.length-1?LINE:DIM, cursor:i===events.length-1?"default":"pointer", fontSize:11 }}>▼</button>
                     </div>
 
                     {/* info */}
@@ -783,6 +788,21 @@ export default function App() {
                       placeholder="Nome do evento"
                       style={{ background:SURF, border:`1px solid ${LINE}`, borderRadius:12,
                                color:TEXT, padding:"13px 14px", fontSize:14, outline:"none" }}/>
+
+                    {!formMand && (
+                      <div>
+                        <div style={{ fontSize:10, color:DIM, marginBottom:4, paddingLeft:2 }}>
+                          Efetivo de cordas necessário (opcional)
+                        </div>
+                        <input type="number" min="1" value={formCordas}
+                          onChange={e=>setFormCordas(e.target.value)}
+                          placeholder="ex: 9"
+                          style={{ background:SURF, border:`1px solid ${LINE}`, borderRadius:12,
+                                   color:TEXT, padding:"13px 14px", fontSize:14, outline:"none",
+                                   width:"100%", boxSizing:"border-box" }}/>
+                      </div>
+                    )}
+
                     <button onClick={()=>setFormMand(v=>!v)}
                       style={{ display:"flex", alignItems:"center", gap:10,
                                background:SURF, border:`1px solid ${formMand?GOLD:LINE}`,
@@ -798,20 +818,6 @@ export default function App() {
                         🔒 Folga obrigatória (dispensa todos)
                       </span>
                     </button>
-
-                    {!formMand && (
-                      <div>
-                        <div style={{ fontSize:10, color:DIM, marginBottom:4, paddingLeft:2 }}>
-                          Efetivo de cordas necessário (opcional)
-                        </div>
-                        <input type="number" min="1" value={formCordas}
-                          onChange={e=>setFormCordas(e.target.value)}
-                          placeholder="ex: 9"
-                          style={{ background:SURF, border:`1px solid ${LINE}`, borderRadius:12,
-                                   color:TEXT, padding:"13px 14px", fontSize:14, outline:"none",
-                                   width:"100%", boxSizing:"border-box" }}/>
-                      </div>
-                    )}
 
                     <div style={{ display:"flex", gap:8, marginTop:4 }}>
                       <button onClick={saveEvent}
