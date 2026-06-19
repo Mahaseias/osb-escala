@@ -2,18 +2,20 @@ import { useState, useEffect } from "react";
 
 /* ─── data ─────────────────────────────────────────────── */
 const INITIAL_EVENTS = [
-  { id:0,  date:"9 Ago",    name:"Concerto Juventude 3 — Bach",          mandatory:false },
-  { id:1,  date:"22 Ago",   name:"Folga Obrigatória — Semana Metais",    mandatory:true  },
-  { id:2,  date:"11 Set",   name:"Concerto Juventude 4",                 mandatory:false },
-  { id:3,  date:"23 Set",   name:"Tributo a John Williams",              mandatory:false },
-  { id:4,  date:"3 Out",    name:"Festival Brahms-Schumann 1.1",         mandatory:false },
-  { id:5,  date:"9 Out",    name:"Concerto Juventude 5 / VALE",          mandatory:false },
-  { id:6,  date:"17 Out",   name:"Festival Brahms-Schumann 1.2",         mandatory:false },
-  { id:7,  date:"24 Out",   name:"Folga Obrigatória — 20 a 25/Out",      mandatory:true  },
-  { id:8,  date:"31 Out",   name:"Festival Brahms-Schumann 1.3",         mandatory:false },
-  { id:9,  date:"19 Nov",   name:"Aquarius / Concerto Juventude 6",      mandatory:false },
-  { id:10, date:"28 Nov",   name:"Série Mundo: Alemanha",                mandatory:false },
-  { id:11, date:"19 Dez",   name:"Harry Potter — John Williams",         mandatory:false },
+  { id:0,  date:"9 Ago",    name:"Concerto Juventude 3 — Bach",                        mandatory:false, cordas:6    },
+  { id:1,  date:"22 Ago",   name:"Folga Obrigatória — Semana Metais",                  mandatory:true,  cordas:null },
+  { id:2,  date:"11 Set",   name:"Concerto Juventude 4",                               mandatory:false, cordas:6    },
+  { id:3,  date:"23 Set",   name:"Tributo a John Williams",                            mandatory:false, cordas:10   },
+  { id:4,  date:"3 Out",    name:"Festival Brahms-Schumann 1.1",                       mandatory:false, cordas:9    },
+  { id:5,  date:"9 Out",    name:"Concerto Juventude 5 / VALE",                        mandatory:false, cordas:6    },
+  { id:6,  date:"17 Out",   name:"Festival Brahms-Schumann 1.2",                       mandatory:false, cordas:9    },
+  { id:7,  date:"24 Out",   name:"Folga Obrigatória — 20 a 25/Out",                   mandatory:true,  cordas:null },
+  { id:8,  date:"31 Out",   name:"Festival Brahms-Schumann 1.3",                       mandatory:false, cordas:9    },
+  { id:12, date:"8 Nov",    name:"Os Pequenos Chiquinha Gonzaga e Carlos Gomes",       mandatory:false, cordas:6    },
+  { id:9,  date:"19 Nov",   name:"Aquarius / Concerto Juventude 6",                    mandatory:false, cordas:8    },
+  { id:10, date:"28 Nov",   name:"Série Mundo: Alemanha",                              mandatory:false, cordas:null },
+  { id:13, date:"4 Dez",    name:"Concerto John Williams (CDA)",                       mandatory:false, cordas:10   },
+  { id:11, date:"19 Dez",   name:"Strauss — Marcelo Lehninger",                        mandatory:false, cordas:null },
 ];
 
 const MUSICIANS = [
@@ -111,10 +113,11 @@ export default function App() {
   const [toast,  setToast]  = useState(null);
 
   // ── event editor state ──
-  const [editingId, setEditingId] = useState(null); // null = not editing, "new" = adding
-  const [formDate,  setFormDate]  = useState("");
-  const [formName,  setFormName]  = useState("");
-  const [formMand,  setFormMand]  = useState(false);
+  const [editingId,   setEditingId]   = useState(null); // null = not editing, "new" = adding
+  const [formDate,    setFormDate]    = useState("");
+  const [formName,    setFormName]    = useState("");
+  const [formMand,    setFormMand]    = useState(false);
+  const [formCordas,  setFormCordas]  = useState("");
 
   // ── musician editor state ──
   const [editingMusId,  setEditingMusId]  = useState(null);
@@ -150,6 +153,18 @@ export default function App() {
     const m  = musicians.find(x=>x.id===mId);
     const on = schedule[mId]?.[eId]==="leave";
     if (!on && rem(m)<=0) { flash(`${m.name}: quota atingida.`, "warn"); return; }
+    if (!on && ev.cordas != null) {
+      const currentAbsences = musicians.filter(x=>schedule[x.id]?.[eId]==="leave").length;
+      const presentAfter = musicians.length - (currentAbsences + 1);
+      if (presentAfter < ev.cordas) {
+        flash(
+          `Bloqueado: este evento precisa de pelo menos ${ev.cordas} músicos presentes. ` +
+          `Marcar essa folga deixaria apenas ${presentAfter}.`,
+          "warn"
+        );
+        return;
+      }
+    }
     setSchedule(p=>({ ...p, [mId]:{ ...(p[mId]||{}), [eId]: on?null:"leave" } }));
   };
 
@@ -179,24 +194,26 @@ export default function App() {
 
   /* ── manual event editor ── */
   const openNewEvent = () => {
-    setEditingId("new"); setFormDate(""); setFormName(""); setFormMand(false);
+    setEditingId("new"); setFormDate(""); setFormName(""); setFormMand(false); setFormCordas("");
   };
 
   const openEditEvent = ev => {
     setEditingId(ev.id); setFormDate(ev.date); setFormName(ev.name); setFormMand(ev.mandatory);
+    setFormCordas(ev.cordas != null ? String(ev.cordas) : "");
   };
 
   const cancelEdit = () => setEditingId(null);
 
   const saveEvent = () => {
     if (!formDate.trim() || !formName.trim()) { flash("Preencha data e nome.", "warn"); return; }
+    const cordas = (!formMand && formCordas.trim() !== "") ? Number(formCordas) : null;
     if (editingId === "new") {
-      setEvents(p => [...p, { id: nextEvtId, date: formDate.trim(), name: formName.trim(), mandatory: formMand }]);
+      setEvents(p => [...p, { id: nextEvtId, date: formDate.trim(), name: formName.trim(), mandatory: formMand, cordas }]);
       setNextEvtId(n => n + 1);
       flash("Evento adicionado.");
     } else {
       setEvents(p => p.map(e => e.id === editingId
-        ? { ...e, date: formDate.trim(), name: formName.trim(), mandatory: formMand }
+        ? { ...e, date: formDate.trim(), name: formName.trim(), mandatory: formMand, cordas }
         : e));
       flash("Evento atualizado.");
     }
@@ -332,6 +349,9 @@ export default function App() {
                 :               MUTED;
               const filled = ev.mandatory || absCount>0;
               const isLast = i === events.length-1;
+              // true when adding one more absence would drop below ev.cordas
+              const coverageReached = !ev.mandatory && ev.cordas != null
+                && (musicians.length - absCount) <= ev.cordas;
 
               return (
                 <div key={ev.id} style={{ display:"flex", gap:14 }}>
@@ -370,11 +390,20 @@ export default function App() {
                           <span style={{ color: absCount>=4?RED:absCount>=2?"#E08A2E":GOLD }}>
                             · {absCount} ausente{absCount>1?"s":""}
                           </span>}
+                        {coverageReached &&
+                          <span style={{ color:GOLD }}>· efetivo mínimo atingido</span>}
                       </div>
                       <div style={{ fontSize:14, fontWeight:600, lineHeight:1.3,
                                     color: ev.mandatory?GOLD:TEXT }}>
                         {ev.name}
                       </div>
+                      {!ev.mandatory && (
+                        <div style={{ fontSize:10, color:DIM, marginTop:3 }}>
+                          {ev.cordas != null
+                            ? `Efetivo de cordas: ${ev.cordas}`
+                            : "Efetivo de cordas: a confirmar"}
+                        </div>
+                      )}
                     </button>
 
                     {/* expanded panel — musicians list with toggle */}
@@ -384,6 +413,8 @@ export default function App() {
                         {musicians.map(m => {
                           const on  = schedule[m.id]?.[ev.id]==="leave";
                           const can = rem(m)>0 || on;
+                          const blockedByCoverage = !on && coverageReached;
+                          const isDisabled = (!can && !on) || blockedByCoverage;
                           return (
                             <div key={m.id}
                               style={{ display:"flex", alignItems:"center",
@@ -392,21 +423,27 @@ export default function App() {
                                        borderTop:`1px solid ${LINE}` }}>
                               <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
                                 <span style={{ fontSize:13.5, fontWeight:500,
-                                              color: can||on ? TEXT : MUTED }}>
+                                              color: isDisabled ? MUTED : TEXT }}>
                                   {m.name}
                                 </span>
                                 <span style={{ fontSize:10.5, color:DIM }}>{m.role}</span>
                                 {!can && !on &&
                                   <span style={{ fontSize:10, color:GREEN }}>· completo</span>}
+                                {blockedByCoverage &&
+                                  <span style={{ fontSize:10, color:GOLD }}>· efetivo min.</span>}
                               </div>
                               <button
                                 onClick={() => toggle(m.id, ev.id)}
-                                disabled={!can && !on}
-                                aria-label={`Folga de ${m.name}`}
+                                disabled={isDisabled}
+                                aria-label={
+                                  blockedByCoverage
+                                    ? "Efetivo mínimo de cordas atingido para este evento"
+                                    : `Folga de ${m.name}`
+                                }
                                 style={{
                                   width:36, height:21, borderRadius:11, border:"none",
                                   background: on ? RED : LINE,
-                                  cursor: can||on ? "pointer" : "not-allowed",
+                                  cursor: isDisabled ? "not-allowed" : "pointer",
                                   position:"relative", flexShrink:0,
                                   transition:"background .2s",
                                 }}>
@@ -761,6 +798,20 @@ export default function App() {
                         🔒 Folga obrigatória (dispensa todos)
                       </span>
                     </button>
+
+                    {!formMand && (
+                      <div>
+                        <div style={{ fontSize:10, color:DIM, marginBottom:4, paddingLeft:2 }}>
+                          Efetivo de cordas necessário (opcional)
+                        </div>
+                        <input type="number" min="1" value={formCordas}
+                          onChange={e=>setFormCordas(e.target.value)}
+                          placeholder="ex: 9"
+                          style={{ background:SURF, border:`1px solid ${LINE}`, borderRadius:12,
+                                   color:TEXT, padding:"13px 14px", fontSize:14, outline:"none",
+                                   width:"100%", boxSizing:"border-box" }}/>
+                      </div>
+                    )}
 
                     <div style={{ display:"flex", gap:8, marginTop:4 }}>
                       <button onClick={saveEvent}
