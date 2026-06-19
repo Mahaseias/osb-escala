@@ -281,7 +281,8 @@ export default function App() {
 
   /* ─── render ─────────────────────────────────────────── */
   return (
-    <div style={{ background:BG, height:"100vh", color:TEXT, display:"flex",
+    <div className="app-root"
+         style={{ background:BG, color:TEXT, display:"flex",
                   flexDirection:"column", overflow:"hidden",
                   fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                   maxWidth:430, margin:"0 auto" }}>
