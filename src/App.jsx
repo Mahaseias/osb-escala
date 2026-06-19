@@ -462,11 +462,11 @@ export default function App() {
                           {hasO && <span style={{ fontSize:12 }}>🎻</span>}
                         </div>
                         <ThinBar pct={p} done={dn}/>
-                        <div style={{ fontSize:11, color:MUTED, marginTop:6 }}>
-                          {used}/{m.total} folgas
-                          <span style={{ color:LINE, marginLeft:6 }}>
-                            · {m.taken} ant. · {MAN} obrig. · {gridLeaves(m.id)} agend.
-                          </span>
+                        <div style={{ fontSize:11, color:DIM, marginTop:6 }}>
+                          {used} de {m.total} folgas usadas
+                        </div>
+                        <div style={{ fontSize:10, color:DIM, marginTop:3, lineHeight:1.5 }}>
+                          {m.taken} tiradas antes · {MAN} obrigatórias do calendário · {gridLeaves(m.id)} agendadas agora
                         </div>
                       </div>
                       {/* right: ring */}
@@ -535,7 +535,7 @@ export default function App() {
                                color:TEXT, padding:"13px 14px", fontSize:14, outline:"none" }}/>
                     <div style={{ display:"flex", gap:8 }}>
                       <div style={{ flex:1 }}>
-                        <div style={{ fontSize:10, color:MUTED, marginBottom:4, paddingLeft:2 }}>
+                        <div style={{ fontSize:10, color:DIM, marginBottom:4, paddingLeft:2 }}>
                           Quota total de folgas
                         </div>
                         <input type="number" min="0" value={formMusTotal}
@@ -545,7 +545,7 @@ export default function App() {
                                    width:"100%", boxSizing:"border-box" }}/>
                       </div>
                       <div style={{ flex:1 }}>
-                        <div style={{ fontSize:10, color:MUTED, marginBottom:4, paddingLeft:2 }}>
+                        <div style={{ fontSize:10, color:DIM, marginBottom:4, paddingLeft:2 }}>
                           Folgas já tiradas
                         </div>
                         <input type="number" min="0" value={formMusTaken}
@@ -583,7 +583,7 @@ export default function App() {
               {requests.length===0 ? (
                 <div style={{ display:"flex", flexDirection:"column",
                               alignItems:"center", justifyContent:"center",
-                              height:"100%", gap:12, color:MUTED }}>
+                              height:"100%", gap:12, color:DIM }}>
                   <span style={{ fontSize:40 }}>📭</span>
                   <span style={{ fontSize:14 }}>Nenhum pedido pendente</span>
                 </div>
