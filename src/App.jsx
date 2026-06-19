@@ -83,6 +83,10 @@ const Ring = ({ pct, rem, done }) => {
 /* ─── persistence helpers (localStorage) ──────────────────── */
 const STORAGE_KEY = "osb-cordas-escala-v1";
 
+// Increment DATA_VERSION whenever INITIAL_EVENTS or MUSICIANS changes so all
+// devices migrate to the new base data on next load.
+const DATA_VERSION = 2;
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -95,17 +99,74 @@ function saveState(state) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
 }
 
+// Computes the initial React state, migrating when saved version differs.
+// On version mismatch: reset events/musicians to INITIAL_* and prune
+// schedule/otherOrch/requests to only IDs that still exist.
+function resolveInitialState() {
+  const saved = loadState();
+  const needsMigration = !saved || saved.dataVersion !== DATA_VERSION;
+
+  if (!needsMigration) {
+    return {
+      events:    saved.events    ?? INITIAL_EVENTS,
+      musicians: saved.musicians ?? MUSICIANS,
+      schedule:  saved.schedule  ?? {},
+      otherOrch: saved.otherOrch ?? {},
+      requests:  saved.requests  ?? [],
+      nextEvtId: saved.nextEvtId ?? 100,
+      nextMusId: saved.nextMusId ?? 100,
+    };
+  }
+
+  // Keep user interaction data only for IDs that exist in the new base lists.
+  const validEvtIds = new Set(INITIAL_EVENTS.map(e => e.id));
+  const validMusIds = new Set(MUSICIANS.map(m => m.id));
+
+  const rawSchedule  = saved?.schedule  ?? {};
+  const rawOtherOrch = saved?.otherOrch ?? {};
+  const rawRequests  = saved?.requests  ?? [];
+
+  const schedule = {};
+  for (const mId of Object.keys(rawSchedule)) {
+    if (!validMusIds.has(+mId)) continue;
+    const evMap = {};
+    for (const eId of Object.keys(rawSchedule[mId])) {
+      if (validEvtIds.has(+eId)) evMap[eId] = rawSchedule[mId][eId];
+    }
+    if (Object.keys(evMap).length) schedule[mId] = evMap;
+  }
+
+  const otherOrch = {};
+  for (const mId of Object.keys(rawOtherOrch)) {
+    if (validMusIds.has(+mId)) otherOrch[mId] = rawOtherOrch[mId];
+  }
+
+  const requests = rawRequests.filter(
+    r => validMusIds.has(r.mId) && validEvtIds.has(r.eIdx)
+  );
+
+  return {
+    events:    INITIAL_EVENTS,
+    musicians: MUSICIANS,
+    schedule,
+    otherOrch,
+    requests,
+    nextEvtId: saved?.nextEvtId ?? 100,
+    nextMusId: saved?.nextMusId ?? 100,
+  };
+}
+
 /* ─── main ──────────────────────────────────────────────── */
 export default function App() {
-  const saved = loadState();
+  const init = resolveInitialState();
 
-  const [events,    setEvents]    = useState(saved?.events    ?? INITIAL_EVENTS);
-  const [schedule,  setSchedule]  = useState(saved?.schedule  ?? {});
-  const [otherOrch, setOtherOrch] = useState(saved?.otherOrch ?? {});
-  const [requests,  setRequests]  = useState(saved?.requests  ?? []);
-  const [nextEvtId, setNextEvtId] = useState(saved?.nextEvtId ?? 100);
-  const [musicians, setMusicians] = useState(saved?.musicians ?? MUSICIANS);
-  const [nextMusId, setNextMusId] = useState(saved?.nextMusId ?? 100);
+  const [events,    setEvents]    = useState(init.events);
+  const [schedule,  setSchedule]  = useState(init.schedule);
+  const [otherOrch, setOtherOrch] = useState(init.otherOrch);
+  const [requests,  setRequests]  = useState(init.requests);
+  const [nextEvtId, setNextEvtId] = useState(init.nextEvtId);
+  const [musicians, setMusicians] = useState(init.musicians);
+  const [nextMusId, setNextMusId] = useState(init.nextMusId);
 
   const [reqMus, setReqMus] = useState("");
   const [reqEvt, setReqEvt] = useState("");
@@ -131,7 +192,7 @@ export default function App() {
 
   // persist whenever core data changes
   useEffect(() => {
-    saveState({ events, schedule, otherOrch, requests, nextEvtId, musicians, nextMusId });
+    saveState({ events, schedule, otherOrch, requests, nextEvtId, musicians, nextMusId, dataVersion: DATA_VERSION });
   }, [events, schedule, otherOrch, requests, nextEvtId, musicians, nextMusId]);
 
   /* helpers */
