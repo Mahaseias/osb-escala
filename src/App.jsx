@@ -2,32 +2,32 @@ import { useState, useEffect } from "react";
 
 /* ─── data ─────────────────────────────────────────────── */
 const INITIAL_EVENTS = [
-  { id:0,  date:"9 Ago",    name:"Concerto Juventude 3 — Bach",                        mandatory:false, cordas:6    },
-  { id:1,  date:"22 Ago",   name:"Folga Obrigatória — Semana Metais",                  mandatory:true,  cordas:null },
-  { id:2,  date:"11 Set",   name:"Concerto Juventude 4",                               mandatory:false, cordas:6    },
-  { id:3,  date:"23 Set",   name:"Tributo a John Williams",                            mandatory:false, cordas:10   },
-  { id:4,  date:"3 Out",    name:"Festival Brahms-Schumann 1.1",                       mandatory:false, cordas:9    },
-  { id:5,  date:"9 Out",    name:"Concerto Juventude 5 / VALE",                        mandatory:false, cordas:6    },
-  { id:6,  date:"17 Out",   name:"Festival Brahms-Schumann 1.2",                       mandatory:false, cordas:9    },
-  { id:7,  date:"24 Out",   name:"Folga Obrigatória — 20 a 25/Out",                   mandatory:true,  cordas:null },
-  { id:8,  date:"31 Out",   name:"Festival Brahms-Schumann 1.3",                       mandatory:false, cordas:9    },
-  { id:12, date:"8 Nov",    name:"Os Pequenos Chiquinha Gonzaga e Carlos Gomes",       mandatory:false, cordas:6    },
-  { id:9,  date:"19 Nov",   name:"Aquarius / Concerto Juventude 6",                    mandatory:false, cordas:8    },
-  { id:10, date:"28 Nov",   name:"Série Mundo: Alemanha",                              mandatory:false, cordas:null },
-  { id:13, date:"4 Dez",    name:"Concerto John Williams (CDA)",                       mandatory:false, cordas:10   },
-  { id:11, date:"19 Dez",   name:"Strauss — Marcelo Lehninger",                        mandatory:false, cordas:null },
+  { id:0,  date:"9 Ago",    name:"Concerto Juventude 3 — Bach",                        mandatory:false, cordas:6,    funcoes:4    },
+  { id:1,  date:"22 Ago",   name:"Folga Obrigatória — Semana Metais",                  mandatory:true,  cordas:null, funcoes:0    },
+  { id:2,  date:"11 Set",   name:"Concerto Juventude 4",                               mandatory:false, cordas:6,    funcoes:4    },
+  { id:3,  date:"23 Set",   name:"Tributo a John Williams",                            mandatory:false, cordas:10,   funcoes:7    },
+  { id:4,  date:"3 Out",    name:"Festival Brahms-Schumann 1.1",                       mandatory:false, cordas:9,    funcoes:6    },
+  { id:5,  date:"9 Out",    name:"Concerto Juventude 5 / VALE",                        mandatory:false, cordas:6,    funcoes:4    },
+  { id:6,  date:"17 Out",   name:"Festival Brahms-Schumann 1.2",                       mandatory:false, cordas:9,    funcoes:6    },
+  { id:7,  date:"24 Out",   name:"Folga Obrigatória — 20 a 25/Out",                   mandatory:true,  cordas:null, funcoes:0    },
+  { id:8,  date:"31 Out",   name:"Festival Brahms-Schumann 1.3",                       mandatory:false, cordas:9,    funcoes:null },
+  { id:12, date:"8 Nov",    name:"Os Pequenos Chiquinha Gonzaga e Carlos Gomes",       mandatory:false, cordas:6,    funcoes:null },
+  { id:9,  date:"19 Nov",   name:"Aquarius / Concerto Juventude 6",                    mandatory:false, cordas:8,    funcoes:null },
+  { id:10, date:"28 Nov",   name:"Série Mundo: Alemanha",                              mandatory:false, cordas:null, funcoes:null },
+  { id:13, date:"4 Dez",    name:"Concerto John Williams (CDA)",                       mandatory:false, cordas:10,   funcoes:null },
+  { id:11, date:"19 Dez",   name:"Strauss — Marcelo Lehninger",                        mandatory:false, cordas:null, funcoes:null },
 ];
 
 const MUSICIANS = [
-  { id:1, name:"Mateus",   abbr:"Mt", role:"Chefe",      total:9, taken:2 },
-  { id:2, name:"Lucas",    abbr:"Lu", role:"Concertino", total:7, taken:2 },
-  { id:3, name:"André",    abbr:"An", role:"Tutti",      total:6, taken:3 },
-  { id:4, name:"Angélica", abbr:"Ag", role:"Tutti",      total:6, taken:2 },
-  { id:5, name:"Cleber",   abbr:"Cl", role:"Tutti",      total:6, taken:3 },
-  { id:6, name:"Desiree",  abbr:"De", role:"Tutti",      total:6, taken:3 },
-  { id:7, name:"Nikolay",  abbr:"Nk", role:"Tutti",      total:6, taken:3 },
-  { id:8, name:"Sérgio",   abbr:"Sr", role:"Tutti",      total:6, taken:4 },
-  { id:9, name:"Daniel",   abbr:"Dn", role:"Tutti",      total:6, taken:3 },
+  { id:1, name:"Mateus",   abbr:"Mt", role:"Chefe",      total:9, taken:2, funcoesTotal:55 },
+  { id:2, name:"Lucas",    abbr:"Lu", role:"Concertino", total:7, taken:2, funcoesTotal:57 },
+  { id:3, name:"André",    abbr:"An", role:"Tutti",      total:6, taken:3, funcoesTotal:51 },
+  { id:4, name:"Angélica", abbr:"Ag", role:"Tutti",      total:6, taken:2, funcoesTotal:55 },
+  { id:5, name:"Cleber",   abbr:"Cl", role:"Tutti",      total:6, taken:3, funcoesTotal:53 },
+  { id:6, name:"Desiree",  abbr:"De", role:"Tutti",      total:6, taken:3, funcoesTotal:53 },
+  { id:7, name:"Nikolay",  abbr:"Nk", role:"Tutti",      total:6, taken:3, funcoesTotal:51 },
+  { id:8, name:"Sérgio",   abbr:"Sr", role:"Tutti",      total:6, taken:4, funcoesTotal:44 },
+  { id:9, name:"Daniel",   abbr:"Dn", role:"Tutti",      total:6, taken:3, funcoesTotal:51 },
 ];
 
 const MAN = 2; // mandatory leaves absorbed
@@ -42,7 +42,8 @@ const TEXT  = "#EEF0F4";
 const GOLD  = "#C9A84C";
 const RED   = "#D94040";
 const GREEN = "#3A9E5F";
-const ROLE_C = { Chefe:"#C9A84C", Concertino:"#8BAAC8", Tutti: TEXT };
+const ROLE_C   = { Chefe:"#C9A84C", Concertino:"#8BAAC8", Tutti: TEXT };
+const ROLE_CAP = { Chefe:30, Concertino:20, Tutti:15 }; // max % de funções perdidas por cargo
 
 /* ─── sub-components ────────────────────────────────────── */
 
@@ -80,12 +81,34 @@ const Ring = ({ pct, rem, done }) => {
   );
 };
 
+/** Circular progress ring for % executado */
+const RingExec = ({ pct }) => {
+  const sz=64, sw=3, r=(sz-sw*2)/2, circ=2*Math.PI*r, fill=(pct/100)*circ;
+  const color = pct >= 95 ? GREEN : GOLD;
+  return (
+    <div style={{ position:"relative", width:sz, height:sz, flexShrink:0 }}>
+      <svg width={sz} height={sz} style={{ transform:"rotate(-90deg)", display:"block" }}>
+        <circle cx={sz/2} cy={sz/2} r={r} fill="none" stroke={LINE} strokeWidth={sw}/>
+        <circle cx={sz/2} cy={sz/2} r={r} fill="none"
+          stroke={color} strokeWidth={sw}
+          strokeDasharray={`${fill} ${circ}`} strokeLinecap="round"
+          style={{ transition:"stroke-dasharray .5s ease, stroke .4s" }}/>
+      </svg>
+      <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column",
+                    alignItems:"center", justifyContent:"center", gap:0 }}>
+        <span style={{ fontSize:19, fontWeight:700, lineHeight:1, color }}>{Math.round(pct)}</span>
+        <span style={{ fontSize:9, color, lineHeight:1.4 }}>%</span>
+      </div>
+    </div>
+  );
+};
+
 /* ─── persistence helpers (localStorage) ──────────────────── */
 const STORAGE_KEY = "osb-cordas-escala-v1";
 
 // Increment DATA_VERSION whenever INITIAL_EVENTS or MUSICIANS changes so all
 // devices migrate to the new base data on next load.
-const DATA_VERSION = 2;
+const DATA_VERSION = 4;
 
 function loadState() {
   try {
@@ -545,10 +568,21 @@ export default function App() {
                 const p    = pct(m);
                 const used = m.taken + MAN + gridLeaves(m.id);
                 const hasO = otherOrch[m.id];
+
+                // funções executadas
+                const ft = m.funcoesTotal ?? 0;
+                const funcoesPerdidas = events
+                  .filter(ev => !ev.mandatory && schedule[m.id]?.[ev.id] === "leave")
+                  .reduce((sum, ev) => sum + (ev.funcoes ?? 0), 0);
+                const pctExecutado    = ft > 0 ? Math.round((ft - funcoesPerdidas) / ft * 1000) / 10 : 0;
+                const percentualFolga = ft > 0 ? Math.round(funcoesPerdidas / ft * 1000) / 10 : 0;
+                const cap = ROLE_CAP[m.role] ?? 15;
+                const capExceeded = percentualFolga > cap;
+
                 return (
                   <div key={m.id} style={{ padding:"20px 0 16px",
                                             borderBottom:`1px solid ${LINE}` }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                       {/* left: info */}
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ display:"flex", alignItems:"baseline",
@@ -567,13 +601,25 @@ export default function App() {
                         <div style={{ fontSize:10, color:DIM, marginTop:3, lineHeight:1.5 }}>
                           {m.taken} tiradas antes · {MAN} obrigatórias do calendário · {gridLeaves(m.id)} agendadas agora
                         </div>
+                        {ft > 0 && (
+                          <div style={{ fontSize:10, color: capExceeded ? RED : DIM,
+                                        marginTop:3, lineHeight:1.5 }}>
+                            {capExceeded && "⚠ "}{percentualFolga}% das funções da temporada (teto do cargo: {cap}%)
+                          </div>
+                        )}
                       </div>
-                      {/* right: ring */}
-                      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3, flexShrink:0 }}>
-                        <Ring pct={p} rem={r} done={dn}/>
-                        <span style={{ fontSize:9, color:DIM, letterSpacing:0.2 }}>
-                          {dn ? "completo" : "restantes"}
-                        </span>
+                      {/* right: two rings */}
+                      <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+                        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+                          <Ring pct={p} rem={r} done={dn}/>
+                          <span style={{ fontSize:9, color:DIM, letterSpacing:0.2 }}>
+                            {dn ? "completo" : "restantes"}
+                          </span>
+                        </div>
+                        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+                          <RingExec pct={pctExecutado}/>
+                          <span style={{ fontSize:9, color:DIM, letterSpacing:0.2 }}>executado</span>
+                        </div>
                       </div>
                     </div>
 
