@@ -19,18 +19,19 @@ const INITIAL_EVENTS = [
 ];
 
 const MUSICIANS = [
-  { id:1, name:"Mateus",   abbr:"Mt", role:"Chefe",      total:9, taken:2, funcoesTotal:55 },
-  { id:2, name:"Lucas",    abbr:"Lu", role:"Concertino", total:7, taken:2, funcoesTotal:57 },
-  { id:3, name:"André",    abbr:"An", role:"Tutti",      total:6, taken:3, funcoesTotal:51 },
-  { id:4, name:"Angélica", abbr:"Ag", role:"Tutti",      total:6, taken:2, funcoesTotal:55 },
-  { id:5, name:"Cleber",   abbr:"Cl", role:"Tutti",      total:6, taken:3, funcoesTotal:53 },
-  { id:6, name:"Desiree",  abbr:"De", role:"Tutti",      total:6, taken:3, funcoesTotal:53 },
-  { id:7, name:"Nikolay",  abbr:"Nk", role:"Tutti",      total:6, taken:3, funcoesTotal:51 },
-  { id:8, name:"Sérgio",   abbr:"Sr", role:"Tutti",      total:6, taken:4, funcoesTotal:44 },
-  { id:9, name:"Daniel",   abbr:"Dn", role:"Tutti",      total:6, taken:3, funcoesTotal:51 },
+  { id:1, name:"Mateus",   abbr:"Mt", role:"Chefe",      total:9, taken:2 },
+  { id:2, name:"Lucas",    abbr:"Lu", role:"Concertino", total:7, taken:2 },
+  { id:3, name:"André",    abbr:"An", role:"Tutti",      total:6, taken:3 },
+  { id:4, name:"Angélica", abbr:"Ag", role:"Tutti",      total:6, taken:2 },
+  { id:5, name:"Cleber",   abbr:"Cl", role:"Tutti",      total:6, taken:3 },
+  { id:6, name:"Desiree",  abbr:"De", role:"Tutti",      total:6, taken:3 },
+  { id:7, name:"Nikolay",  abbr:"Nk", role:"Tutti",      total:6, taken:3 },
+  { id:8, name:"Sérgio",   abbr:"Sr", role:"Tutti",      total:6, taken:4 },
+  { id:9, name:"Daniel",   abbr:"Dn", role:"Tutti",      total:6, taken:3 },
 ];
 
 const MAN = 2; // mandatory leaves absorbed
+const TOTAL_FUNCOES_ANO = 70; // total de funções na temporada (fixo para todos os músicos)
 
 /* ─── palette ──────────────────────────────────────────── */
 const BG    = "#08090B";
@@ -81,10 +82,10 @@ const Ring = ({ pct, rem, done }) => {
   );
 };
 
-/** Circular progress ring for % executado */
-const RingExec = ({ pct }) => {
+/** Circular progress ring for % projetado (ok=true → verde, ok=false → vermelho) */
+const RingExec = ({ pct, ok }) => {
   const sz=64, sw=3, r=(sz-sw*2)/2, circ=2*Math.PI*r, fill=(pct/100)*circ;
-  const color = pct >= 95 ? GREEN : GOLD;
+  const color = ok ? GREEN : RED;
   return (
     <div style={{ position:"relative", width:sz, height:sz, flexShrink:0 }}>
       <svg width={sz} height={sz} style={{ transform:"rotate(-90deg)", display:"block" }}>
@@ -108,7 +109,7 @@ const STORAGE_KEY = "osb-cordas-escala-v1";
 
 // Increment DATA_VERSION whenever INITIAL_EVENTS or MUSICIANS changes so all
 // devices migrate to the new base data on next load.
-const DATA_VERSION = 4;
+const DATA_VERSION = 5;
 
 function loadState() {
   try {
@@ -569,15 +570,13 @@ export default function App() {
                 const used = m.taken + MAN + gridLeaves(m.id);
                 const hasO = otherOrch[m.id];
 
-                // funções executadas
-                const ft = m.funcoesTotal ?? 0;
+                // projeção de funções (apenas eventos com funcoes != null contam como perda)
                 const funcoesPerdidas = events
-                  .filter(ev => !ev.mandatory && schedule[m.id]?.[ev.id] === "leave")
-                  .reduce((sum, ev) => sum + (ev.funcoes ?? 0), 0);
-                const pctExecutado    = ft > 0 ? Math.round((ft - funcoesPerdidas) / ft * 1000) / 10 : 0;
-                const percentualFolga = ft > 0 ? Math.round(funcoesPerdidas / ft * 1000) / 10 : 0;
-                const cap = ROLE_CAP[m.role] ?? 15;
-                const capExceeded = percentualFolga > cap;
+                  .filter(ev => !ev.mandatory && ev.funcoes != null && schedule[m.id]?.[ev.id] === "leave")
+                  .reduce((sum, ev) => sum + ev.funcoes, 0);
+                const pctProjetado   = Math.round((TOTAL_FUNCOES_ANO - funcoesPerdidas) / TOTAL_FUNCOES_ANO * 1000) / 10;
+                const minimoTrabalho = 100 - (ROLE_CAP[m.role] ?? 15);
+                const abaixoMinimo   = pctProjetado < minimoTrabalho;
 
                 return (
                   <div key={m.id} style={{ padding:"20px 0 16px",
@@ -601,12 +600,12 @@ export default function App() {
                         <div style={{ fontSize:10, color:DIM, marginTop:3, lineHeight:1.5 }}>
                           {m.taken} tiradas antes · {MAN} obrigatórias do calendário · {gridLeaves(m.id)} agendadas agora
                         </div>
-                        {ft > 0 && (
-                          <div style={{ fontSize:10, color: capExceeded ? RED : DIM,
-                                        marginTop:3, lineHeight:1.5 }}>
-                            {capExceeded && "⚠ "}{percentualFolga}% das funções da temporada (teto do cargo: {cap}%)
-                          </div>
-                        )}
+                        <div style={{ fontSize:10, color: abaixoMinimo ? RED : DIM,
+                                      marginTop:3, lineHeight:1.5 }}>
+                          {abaixoMinimo
+                            ? `⚠ Projeção: ${pctProjetado}% trabalhado (mínimo exigido: ${minimoTrabalho}%)`
+                            : `${pctProjetado}% projetado de trabalho (teto de folga: ${ROLE_CAP[m.role] ?? 15}%)`}
+                        </div>
                       </div>
                       {/* right: two rings */}
                       <div style={{ display:"flex", gap:8, flexShrink:0 }}>
@@ -617,8 +616,8 @@ export default function App() {
                           </span>
                         </div>
                         <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
-                          <RingExec pct={pctExecutado}/>
-                          <span style={{ fontSize:9, color:DIM, letterSpacing:0.2 }}>executado</span>
+                          <RingExec pct={pctProjetado} ok={!abaixoMinimo}/>
+                          <span style={{ fontSize:9, color:DIM, letterSpacing:0.2 }}>projetado</span>
                         </div>
                       </div>
                     </div>
