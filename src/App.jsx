@@ -124,8 +124,8 @@ function saveState(state) {
 }
 
 // Computes the initial React state, migrating when saved version differs.
-// On version mismatch: reset events/musicians to INITIAL_* and prune
-// schedule/otherOrch/requests to only IDs that still exist.
+// On version mismatch: refreshes fields from code but preserves the user's
+// ordering (saved order → data from code; new code entries appended; removed entries discarded).
 function resolveInitialState() {
   const saved = loadState();
   const needsMigration = !saved || saved.dataVersion !== DATA_VERSION;
@@ -142,9 +142,29 @@ function resolveInitialState() {
     };
   }
 
-  // Keep user interaction data only for IDs that exist in the new base lists.
-  const validEvtIds = new Set(INITIAL_EVENTS.map(e => e.id));
-  const validMusIds = new Set(MUSICIANS.map(m => m.id));
+  // Merge events: user order from saved, fields from code; append new; drop removed.
+  const initEvtMap = new Map(INITIAL_EVENTS.map(e => [e.id, e]));
+  const savedEvts  = saved?.events ?? [];
+  const events = savedEvts.length
+    ? [
+        ...savedEvts.filter(e => initEvtMap.has(e.id)).map(e => initEvtMap.get(e.id)),
+        ...INITIAL_EVENTS.filter(e => !savedEvts.some(se => se.id === e.id)),
+      ]
+    : INITIAL_EVENTS;
+
+  // Merge musicians: same strategy.
+  const initMusMap = new Map(MUSICIANS.map(m => [m.id, m]));
+  const savedMus   = saved?.musicians ?? [];
+  const musicians = savedMus.length
+    ? [
+        ...savedMus.filter(m => initMusMap.has(m.id)).map(m => initMusMap.get(m.id)),
+        ...MUSICIANS.filter(m => !savedMus.some(sm => sm.id === m.id)),
+      ]
+    : MUSICIANS;
+
+  // Prune interaction data to IDs that survived the merge.
+  const validEvtIds = new Set(events.map(e => e.id));
+  const validMusIds = new Set(musicians.map(m => m.id));
 
   const rawSchedule  = saved?.schedule  ?? {};
   const rawOtherOrch = saved?.otherOrch ?? {};
@@ -170,8 +190,8 @@ function resolveInitialState() {
   );
 
   return {
-    events:    INITIAL_EVENTS,
-    musicians: MUSICIANS,
+    events,
+    musicians,
     schedule,
     otherOrch,
     requests,
@@ -829,35 +849,45 @@ export default function App() {
                 <div key={ev.id} style={{ borderBottom:`1px solid ${LINE}`, padding:"12px 0" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                     {/* reorder arrows */}
-                    <div style={{ display:"flex", flexDirection:"column", gap:2, flexShrink:0 }}>
+                    <div style={{ display:"flex", flexDirection:"column", flexShrink:0 }}>
                       <button
-                        onClick={e=>{ e.stopPropagation(); moveEvent(ev.id,-1); }}
+                        onClick={e=>{ e.preventDefault(); e.stopPropagation(); moveEvent(ev.id,-1); }}
                         disabled={i===0}
-                        style={{ width:28, height:22, border:"none", background:"transparent",
-                                 color: i===0?LINE:DIM, cursor:i===0?"default":"pointer", fontSize:11 }}>▲</button>
+                        style={{ minWidth:44, minHeight:44, border:"none", background:"transparent",
+                                 color: i===0?LINE:DIM, cursor:i===0?"default":"pointer",
+                                 fontSize:12, display:"flex", alignItems:"center", justifyContent:"center" }}>▲</button>
                       <button
-                        onClick={e=>{ e.stopPropagation(); moveEvent(ev.id,1); }}
+                        onClick={e=>{ e.preventDefault(); e.stopPropagation(); moveEvent(ev.id,1); }}
                         disabled={i===events.length-1}
-                        style={{ width:28, height:22, border:"none", background:"transparent",
-                                 color: i===events.length-1?LINE:DIM, cursor:i===events.length-1?"default":"pointer", fontSize:11 }}>▼</button>
+                        style={{ minWidth:44, minHeight:44, border:"none", background:"transparent",
+                                 color: i===events.length-1?LINE:DIM, cursor:i===events.length-1?"default":"pointer",
+                                 fontSize:12, display:"flex", alignItems:"center", justifyContent:"center" }}>▼</button>
                     </div>
 
                     {/* info */}
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div onClick={()=>openEditEvent(ev)} style={{ cursor:"pointer" }}>
-                        <span style={{ fontSize:12, color:ev.mandatory?GOLD:DIM, fontWeight:600 }}>
-                          {ev.date}
-                        </span>
-                        {ev.mandatory && <span style={{ marginLeft:6, fontSize:11 }}>🔒</span>}
-                        <div style={{ fontSize:14, fontWeight:600,
-                                      color:ev.mandatory?GOLD:TEXT, marginTop:2 }}>
-                          {ev.name}
-                        </div>
+                      <span style={{ fontSize:12, color:ev.mandatory?GOLD:DIM, fontWeight:600 }}>
+                        {ev.date}
+                      </span>
+                      {ev.mandatory && <span style={{ marginLeft:6, fontSize:11 }}>🔒</span>}
+                      <div style={{ fontSize:14, fontWeight:600,
+                                    color:ev.mandatory?GOLD:TEXT, marginTop:2 }}>
+                        {ev.name}
                       </div>
                     </div>
 
+                    {/* edit */}
+                    <button onClick={()=>openEditEvent(ev)}
+                      title="Editar evento"
+                      style={{ width:30, height:30, borderRadius:8, border:`1px solid ${LINE}`,
+                               background:"transparent", color:DIM, cursor:"pointer",
+                               fontSize:13, flexShrink:0 }}>
+                      ✎
+                    </button>
+
                     {/* delete */}
                     <button onClick={()=>deleteEvent(ev.id)}
+                      title="Excluir evento"
                       style={{ width:30, height:30, borderRadius:8, border:`1px solid ${LINE}`,
                                background:"transparent", color:RED, cursor:"pointer",
                                fontSize:13, flexShrink:0 }}>
